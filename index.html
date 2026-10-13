@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador académico</title>
+<style>
+:root{--bg:#f2f3f2;--card:#fff;--ink:#1c1f1d;--mute:#5f6661;--line:#d9dcda;--verde:#1a6b45;--verde2:#14543a}
+@media (prefers-color-scheme:dark){:root{--bg:#161917;--card:#202421;--ink:#eceeed;--mute:#9aa29d;--line:#363b38;--verde:#2f9468;--verde2:#278059}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.4rem;margin:0 0 4px}
+.sub{color:var(--mute);margin:0 0 16px;font-size:.9rem}
+.tabs{display:flex;gap:8px;margin:0 0 16px}
+fieldset{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:16px;margin:0 0 16px}
+legend{font-weight:700;padding:0 6px}
+label{display:block;font-weight:600;margin:12px 0 4px}
+label:first-of-type{margin-top:0}
+input[type=text],input[type=date],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{min-height:110px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--verde);outline-offset:1px}
+.fila{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.fila{grid-template-columns:1fr}}
+.op{display:flex;gap:8px;align-items:center;font-weight:400;margin:10px 0 0}
+.op input{width:18px;height:18px;accent-color:var(--verde)}
+.ayuda{color:var(--mute);font-size:.85rem;margin:4px 0 0}
+#miniaturas{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+#miniaturas img{height:64px;border-radius:6px;border:1px solid var(--line)}
+button{width:100%;padding:16px;border:0;border-radius:12px;background:var(--verde);color:#fff;font:700 1rem inherit;font-family:inherit;cursor:pointer}
+button:hover{background:var(--verde2)}
+.tabs button{padding:12px 6px;background:var(--card);color:var(--ink);border:1px solid var(--line);font-weight:600}
+.tabs button:hover{background:var(--line)}
+.tabs button[aria-selected=true]{background:var(--verde);color:#fff;border-color:var(--verde)}
+button.sec{background:transparent;color:var(--mute);border:1px solid var(--line);padding:10px;font-weight:500;font-size:.9rem;margin-top:12px}
+button.sec:hover{background:var(--line)}
+#estado,#guardado{margin:12px 0 0;min-height:1.4em;font-size:.9rem}
+#guardado{color:var(--mute);margin-top:0;font-size:.85rem}
+body[data-modo=normal] [data-solo]:not([data-solo~=normal]),body[data-modo=quimica] [data-solo]:not([data-solo~=quimica]),body[data-modo=paper] [data-solo]:not([data-solo~=paper]){display:none}
+</style>
+</head>
+<body data-modo="normal">
+<main>
+<h1>Generador académico</h1>
+<p class="sub">Llena los campos y descarga el Word listo. Tu texto se guarda solo.</p>
+
+<div class="tabs" role="tablist">
+<button type="button" role="tab" data-modo="normal" aria-selected="true">Informe normal</button>
+<button type="button" role="tab" data-modo="quimica" aria-selected="false">Informe de química</button>
+<button type="button" role="tab" data-modo="paper" aria-selected="false">Paper académico</button>
+</div>
+
+<fieldset>
+<legend>Portada</legend>
+<label for="univ">Universidad</label>
+<input type="text" id="univ" value="Universidad de Panamá">
+<label for="facultad">Facultad</label>
+<input type="text" id="facultad" value="Facultad de Ingeniería">
+<label for="carrera">Carrera</label>
+<input type="text" id="carrera" value="Ingeniería Civil en Infraestructuras">
+<label for="titulo">Título (curso o trabajo)</label>
+<input type="text" id="titulo" placeholder="Laboratorio #2">
+<label for="temas">Temas o descripción (una línea por tema)</label>
+<textarea id="temas" style="min-height:80px"></textarea>
+<label for="integrantes">Integrantes (uno por línea)</label>
+<textarea id="integrantes" style="min-height:70px"></textarea>
+<div class="fila">
+<div><label for="asignatura">Asignatura</label><input type="text" id="asignatura" placeholder="Química-100"></div>
+<div><label for="fecha">Fecha de entrega</label><input type="date" id="fecha"></div>
+</div>
+<label for="docentes">Docentes</label>
+<input type="text" id="docentes">
+<label for="asistente">Asistente (opcional)</label>
+<input type="text" id="asistente">
+<label for="logoIzq">Logo izquierdo (opcional)</label>
+<input type="file" id="logoIzq" accept="image/png,image/jpeg">
+<label for="logoDer">Logo derecho (opcional)</label>
+<input type="file" id="logoDer" accept="image/png,image/jpeg">
+</fieldset>
+
+<fieldset>
+<legend>Contenido</legend>
+<p class="ayuda">Un Enter separa los párrafos. Formato: <b>##</b> subtítulo · <b>###</b> sub-subtítulo · <b>-</b> viñeta · **negrita** · *cursiva* · H~2~O subíndice · 10^23^ superíndice.</p>
+
+<div data-solo="quimica paper">
+<label for="resumen">Resumen</label>
+<textarea id="resumen"></textarea>
+</div>
+<div data-solo="paper">
+<label for="palabras">Palabras clave (separadas por comas)</label>
+<input type="text" id="palabras">
+</div>
+
+<label for="intro">Introducción</label>
+<textarea id="intro" placeholder="Escribe o pega aquí tu introducción…"></textarea>
+
+<div data-solo="normal">
+<label for="desarrollo">Desarrollo</label>
+<textarea id="desarrollo" placeholder="Escribe o pega aquí el contenido…"></textarea>
+</div>
+
+<div data-solo="quimica">
+<label>Materiales (el sistema arma la tabla)</label>
+<div class="fila">
+<div><label for="equipo">Instrumentos y equipo</label><textarea id="equipo" placeholder="Uno por línea"></textarea></div>
+<div><label for="muestras">Muestras y reactivos</label><textarea id="muestras" placeholder="Uno por línea"></textarea></div>
+</div>
+<label for="metodologia">Metodología</label>
+<textarea id="metodologia" placeholder="Usa ## para Parte I, ### para 1.1 y - para los pasos"></textarea>
+<label for="resultados">Resultados y discusión</label>
+<textarea id="resultados"></textarea>
+<p class="ayuda">Las tablas de resultados agrégalas a mano en Word, en el lugar que quieras.</p>
+<label for="discusion">Discusión</label>
+<textarea id="discusion"></textarea>
+<label for="preguntas">Preguntas y respuestas complementarias</label>
+<textarea id="preguntas" placeholder="Empieza cada pregunta con ? y escribe la respuesta debajo"></textarea>
+</div>
+
+<div data-solo="paper">
+<label for="objGeneral">Objetivo general</label>
+<textarea id="objGeneral" style="min-height:70px"></textarea>
+<label for="objEsp">Objetivos específicos (uno por línea)</label>
+<textarea id="objEsp" style="min-height:90px"></textarea>
+<label for="marco">Marco teórico y desarrollo de los conceptos</label>
+<textarea id="marco"></textarea>
+<label for="ecuaciones">Ecuaciones fundamentales y explicación de variables</label>
+<textarea id="ecuaciones" placeholder="$ Q = A · v&#10;donde:&#10;- **Q**: caudal (m^3^/s)"></textarea>
+<p class="ayuda">Una línea que empiece con <b>$</b> se centra como ecuación. Usa ~ y ^ para subíndices y superíndices.</p>
+<label for="aplicaciones">Aplicaciones en ingeniería</label>
+<textarea id="aplicaciones"></textarea>
+<label for="analisis">Análisis y discusión</label>
+<textarea id="analisis"></textarea>
+</div>
+
+<label for="concl">Conclusión</label>
+<textarea id="concl"></textarea>
+<label for="refs" id="lblRefs">Referencias</label>
+<textarea id="refs" placeholder="Una referencia por línea"></textarea>
+</fieldset>
+
+<fieldset>
+<legend>Anexos</legend>
+<label for="imgs">Fotografías o gráficos (se colocan al final)</label>
+<input type="file" id="imgs" accept="image/png,image/jpeg" multiple>
+<div id="miniaturas"></div>
+<p class="ayuda">Las imágenes y los logos no se guardan solos: si cierras la página, súbelos otra vez.</p>
+</fieldset>
+
+<fieldset>
+<legend>Formato</legend>
+<div class="fila">
+<div><label for="papel">Tamaño de papel</label>
+<select id="papel"><option value="letter">Carta</option><option value="a4">A4</option></select></div>
+<div><label for="fuente">Fuente</label>
+<select id="fuente"><option>Times New Roman</option><option>Calibri</option><option>Arial</option></select></div>
+</div>
+<label class="op"><input type="checkbox" id="just" checked> Texto justificado</label>
+<label class="op"><input type="checkbox" id="indice" checked> Incluir índice</label>
+</fieldset>
+
+<p id="guardado" role="status"></p>
+<button id="generar" type="button">Generar documento Word</button>
+<p id="estado" role="status"></p>
+<button id="borrar" class="sec" type="button">Borrar todo el texto guardado</button>
+</main>
+
+<script src="docx.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js';document.head.appendChild(s)"></script>
+<script>
+const $ = id => document.getElementById(id);
+const estado = (t, error) => { $('estado').textContent = t; $('estado').style.color = error ? '#c0392b' : 'inherit'; };
+const parrafos = t => t.split(/\n+/).map(x => x.trim()).filter(Boolean);
+
+// ---------- Pestañas ----------
+function modo(m) {
+  document.body.dataset.modo = m;
+  document.querySelectorAll('[role=tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.modo === m)));
+  $('lblRefs').textContent = m === 'quimica' ? 'Bibliografía' : m === 'paper' ? 'Referencias bibliográficas' : 'Referencias';
+}
+document.querySelectorAll('[role=tab]').forEach(b => b.addEventListener('click', () => { modo(b.dataset.modo); guardar(); }));
+
+// ---------- Guardado automático ----------
+const CLAVE = 'generadorAcademico_v1';
+const campos = () => [...document.querySelectorAll('input[type=text],input[type=date],textarea,select,input[type=checkbox]')];
+function guardar() {
+  try {
+    const d = { modo: document.body.dataset.modo };
+    campos().forEach(e => { d[e.id] = e.type === 'checkbox' ? e.checked : e.value; });
+    localStorage.setItem(CLAVE, JSON.stringify(d));
+    $('guardado').textContent = 'Texto guardado en este equipo ✓';
+  } catch (err) { $('guardado').textContent = 'Este navegador no permite guardar el texto automáticamente.'; }
+}
+function restaurar() {
+  try {
+    const d = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+    if (!d) return;
+    campos().forEach(e => { if (e.id in d) { if (e.type === 'checkbox') e.checked = d[e.id]; else e.value = d[e.id]; } });
+    modo(d.modo || 'normal');
+    $('guardado').textContent = 'Se recuperó tu texto guardado ✓';
+  } catch (err) { /* sin datos guardados */ }
+}
+document.addEventListener('input', guardar);
+document.addEventListener('change', guardar);
+$('borrar').addEventListener('click', () => {
+  if (confirm('¿Borrar todo el texto guardado y empezar de cero?')) { try { localStorage.removeItem(CLAVE); } catch (e) {} location.reload(); }
+});
+restaurar();
+
+// ---------- Miniaturas ----------
+$('imgs').addEventListener('change', e => {
+  $('miniaturas').innerHTML = '';
+  [...e.target.files].forEach(f => { const im = new Image(); im.src = URL.createObjectURL(f); $('miniaturas').appendChild(im); });
+});
+
+function dimensiones(archivo) {
+  return new Promise((ok, fallo) => {
+    const url = URL.createObjectURL(archivo), im = new Image();
+    im.onload = () => { ok({ w: im.naturalWidth, h: im.naturalHeight }); URL.revokeObjectURL(url); };
+    im.onerror = () => fallo(new Error('No se pudo leer ' + archivo.name));
+    im.src = url;
+  });
+}
+
+// ---------- Generar Word ----------
+async function generar() {
+  if (!window.docx) { estado('No se cargó docx.js. Guárdalo en la misma carpeta que este archivo (ver instrucciones).', true); return; }
+  const { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, HeadingLevel, Header, PageNumber, PageBreak, TableOfContents,
+    Table, TableRow, TableCell, BorderStyle, WidthType, VerticalAlign, NumberFormat, LevelFormat, ShadingType } = window.docx;
+
+  const q = document.body.dataset.modo === 'quimica';
+  const paper = document.body.dataset.modo === 'paper';
+  const fuente = $('fuente').value;
+  const alinea = $('just').checked ? AlignmentType.JUSTIFIED : AlignmentType.LEFT;
+  const doble = { line: 480, before: 0, after: 0 };
+  const sencillo = { line: 276, before: 0, after: 0 };
+  const run = (text, extra = {}) => new TextRun({ text, font: fuente, size: 24, ...extra });
+  // **negrita**, *cursiva*, ^superíndice^, ~subíndice~
+  const runs = (t, base = {}) => t.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\^[^^\s]+\^|~[^~\s]+~)/).filter(Boolean).map(p =>
+    p.startsWith('**') ? run(p.slice(2, -2), { ...base, bold: true }) :
+    p.startsWith('*') ? run(p.slice(1, -1), { ...base, italics: true }) :
+    p.startsWith('^') ? run(p.slice(1, -1), { ...base, superScript: true }) :
+    p.startsWith('~') ? run(p.slice(1, -1), { ...base, subScript: true }) : run(p, base));
+
+  const h1 = t => new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, spacing: doble, children: [run(t, { bold: true })] });
+  const h2 = t => new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: doble, children: runs(t, { bold: true }) });
+  const h3 = t => new Paragraph({ heading: HeadingLevel.HEADING_3, spacing: doble, children: runs(t, { bold: true, italics: true }) });
+  const vineta = (t, base = {}) => new Paragraph({ numbering: { reference: 'vinetas', level: 0 }, alignment: alinea, spacing: doble, children: runs(t, base) });
+
+  const cuerpo = txt => parrafos(txt).map(p =>
+    p.startsWith('$ ') ? new Paragraph({ alignment: AlignmentType.CENTER, spacing: doble, children: runs(p.slice(2), { italics: true }) }) :
+    p.startsWith('### ') ? h3(p.slice(4)) :
+    p.startsWith('## ') ? h2(p.slice(3)) :
+    p.startsWith('? ') ? vineta(p.slice(2), { bold: true }) :
+    p.startsWith('- ') ? vineta(p.slice(2)) :
+    new Paragraph({ alignment: alinea, spacing: doble, indent: { firstLine: 720 }, children: runs(p) }));
+
+  // ----- Portada (sin número de página) -----
+  const portada = [];
+  const c = (text, extra = {}, sp = sencillo) => new Paragraph({ alignment: AlignmentType.CENTER, spacing: sp, children: [run(text, extra)] });
+  const etiqueta = t => new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 280, after: 40 },
+    children: [run(t.toUpperCase(), { bold: true, size: 20, color: '2E3A8C', characterSpacing: 40 })] });
+  const separador = () => new Paragraph({ spacing: { before: 200, after: 200 }, indent: { left: 1700, right: 1700 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 1 } }, children: [] });
+
+  async function logo(id) {
+    const f = $(id).files[0];
+    if (!f) return new Paragraph({ children: [] });
+    const { w, h } = await dimensiones(f);
+    const k = Math.min(90 / h, 110 / w);
+    return new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ data: await f.arrayBuffer(),
+      type: f.type.includes('png') ? 'png' : 'jpg', transformation: { width: Math.round(w * k), height: Math.round(h * k) } })] });
+  }
+  const sinBorde = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const bordes = { top: sinBorde, bottom: sinBorde, left: sinBorde, right: sinBorde };
+  const celda = (kids, ancho) => new TableCell({ width: { size: ancho, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: bordes, children: kids });
+
+  portada.push(new Table({
+    width: { size: 9000, type: WidthType.DXA }, columnWidths: [1800, 5400, 1800],
+    borders: { ...bordes, insideHorizontal: sinBorde, insideVertical: sinBorde },
+    rows: [new TableRow({ children: [
+      celda([await logo('logoIzq')], 1800),
+      celda([c($('univ').value, { bold: true, size: 32 }), c($('facultad').value), c($('carrera').value)], 5400),
+      celda([await logo('logoDer')], 1800)
+    ] })]
+  }));
+  portada.push(separador());
+  portada.push(c($('titulo').value || 'Título del trabajo', { bold: true, size: 44 }, { before: 120, after: 160, line: 276 }));
+  parrafos($('temas').value).forEach(t => portada.push(c(t)));
+  portada.push(separador());
+  [['Integrantes', 'integrantes'], ['Asignatura', 'asignatura'], ['Docentes', 'docentes'], ['Asistente', 'asistente']].forEach(([et, id]) => {
+    const ls = parrafos($(id).value);
+    if (ls.length) { portada.push(etiqueta(et)); ls.forEach(l => portada.push(c(l))); }
+  });
+  if ($('fecha').value) {
+    const [y, m, d] = $('fecha').value.split('-').map(Number);
+    const f = new Date(y, m - 1, d).toLocaleDateString('es-PA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    portada.push(etiqueta('Fecha de entrega'), c(f.charAt(0).toUpperCase() + f.slice(1)));
+  }
+
+  // ----- Índice (sin número de página) -----
+  const indiceHijos = [];
+  if ($('indice').checked) {
+    indiceHijos.push(h1('Índice'));
+    indiceHijos.push(new TableOfContents('Índice', { hyperlink: true, headingStyleRange: '1-2' }));
+  }
+
+  // ----- Cuerpo (la numeración empieza en la introducción) -----
+  const hijos = [];
+  const seccion = (titulo, id) => { if ($(id).value.trim()) hijos.push(h1(titulo), ...cuerpo($(id).value)); };
+
+  if (q) {
+    seccion('Resumen', 'resumen');
+    seccion('Introducción', 'intro');
+
+    const equipo = parrafos($('equipo').value), muestras = parrafos($('muestras').value);
+    if (equipo.length || muestras.length || $('metodologia').value.trim()) {
+      hijos.push(h1('Materiales y métodos'));
+      if (equipo.length || muestras.length) {
+        const linea = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
+        const cel = (items, titulo) => new TableCell({ width: { size: 4500, type: WidthType.DXA },
+          margins: { top: 60, bottom: 60, left: 100, right: 100 },
+          shading: titulo ? { type: ShadingType.CLEAR, fill: 'E7E6E6', color: 'auto' } : undefined,
+          children: (titulo ? [titulo] : items).map(t => new Paragraph({ alignment: titulo ? AlignmentType.CENTER : AlignmentType.LEFT, spacing: sencillo,
+            children: titulo ? [run(t, { bold: true, size: 22 })] : runs(t, { size: 22 }) })) });
+        hijos.push(h2('Materiales'));
+        hijos.push(new Table({ width: { size: 9000, type: WidthType.DXA }, columnWidths: [4500, 4500],
+          borders: { top: linea, bottom: linea, left: linea, right: linea, insideHorizontal: linea, insideVertical: linea },
+          rows: [new TableRow({ tableHeader: true, children: [cel(null, 'Instrumentos y equipo'), cel(null, 'Muestras y reactivos')] }),
+                 new TableRow({ children: [cel(equipo), cel(muestras)] })] }));
+      }
+      if ($('metodologia').value.trim()) hijos.push(h2('Metodología'), ...cuerpo($('metodologia').value));
+    }
+    seccion('Resultados y discusión', 'resultados');
+    seccion('Discusión', 'discusion');
+    seccion('Preguntas y respuestas complementarias', 'preguntas');
+    seccion('Conclusiones', 'concl');
+  } else if (paper) {
+    if ($('resumen').value.trim() || $('palabras').value.trim()) {
+      hijos.push(h1('Resumen'), ...cuerpo($('resumen').value));
+      if ($('palabras').value.trim()) hijos.push(new Paragraph({ alignment: alinea, spacing: doble, indent: { firstLine: 720 },
+        children: [run('Palabras clave: ', { italics: true }), ...runs($('palabras').value.trim())] }));
+    }
+    seccion('Introducción', 'intro');
+    if ($('objGeneral').value.trim() || $('objEsp').value.trim()) {
+      hijos.push(h1('Objetivos generales y específicos'));
+      if ($('objGeneral').value.trim()) hijos.push(h2('Objetivo general'), ...cuerpo($('objGeneral').value));
+      if ($('objEsp').value.trim()) hijos.push(h2('Objetivos específicos'), ...parrafos($('objEsp').value).map(l => vineta(l.replace(/^- /, ''))));
+    }
+    seccion('Marco teórico y desarrollo de los conceptos', 'marco');
+    seccion('Ecuaciones fundamentales y explicación de variables', 'ecuaciones');
+    seccion('Aplicaciones en ingeniería', 'aplicaciones');
+    seccion('Análisis y discusión', 'analisis');
+    seccion('Conclusiones', 'concl');
+  } else {
+    seccion('Introducción', 'intro');
+    seccion('Desarrollo', 'desarrollo');
+    seccion('Conclusión', 'concl');
+  }
+
+  // Referencias o bibliografía (sangría francesa)
+  if ($('refs').value.trim()) {
+    hijos.push(new Paragraph({ children: [new PageBreak()] }), h1(q ? 'Bibliografía' : paper ? 'Referencias bibliográficas' : 'Referencias'));
+    parrafos($('refs').value).forEach(r => hijos.push(new Paragraph({
+      spacing: doble, indent: { left: 720, hanging: 720 }, children: runs(r) })));
+  }
+
+  // Anexos (imágenes al final)
+  const archivos = [...$('imgs').files];
+  if (archivos.length) {
+    estado('Procesando imágenes…');
+    hijos.push(new Paragraph({ children: [new PageBreak()] }), h1('Anexos'));
+    const maxW = 560, maxH = 620;
+    for (let i = 0; i < archivos.length; i++) {
+      const f = archivos[i];
+      const { w, h } = await dimensiones(f);
+      const k = Math.min(maxW / w, maxH / h, 1);
+      const data = await f.arrayBuffer();
+      hijos.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 60 }, children: [
+        new ImageRun({ data, type: f.type.includes('png') ? 'png' : 'jpg', transformation: { width: Math.round(w * k), height: Math.round(h * k) } })] }));
+      hijos.push(c('Figura ' + (i + 1), { italics: true }, doble));
+    }
+  }
+
+  const a4 = $('papel').value === 'a4';
+  const pagina = {
+    size: a4 ? { width: 11906, height: 16838 } : { width: 12240, height: 15840 },
+    margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } };
+  const sections = [{ properties: { page: pagina }, children: portada }];
+  if (indiceHijos.length) sections.push({ properties: { page: pagina }, children: indiceHijos });
+  sections.push({
+    properties: { page: { ...pagina, pageNumbers: { start: 1, formatType: NumberFormat.DECIMAL } } },
+    headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT,
+      children: [new TextRun({ children: [PageNumber.CURRENT], font: fuente, size: 24 })] })] }) },
+    children: hijos
+  });
+
+  const estiloH = (id, nombre, n, extra = {}) => ({ id, name: nombre, basedOn: 'Normal', next: 'Normal', quickFormat: true,
+    run: { font: fuente, size: 24, bold: true, color: '000000', ...extra }, paragraph: { outlineLevel: n } });
+  const doc = new Document({
+    features: { updateFields: true },
+    numbering: { config: [{ reference: 'vinetas', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•',
+      alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] }] },
+    styles: {
+      default: { document: { run: { font: fuente, size: 24 } } },
+      paragraphStyles: [estiloH('Heading1', 'Heading 1', 0), estiloH('Heading2', 'Heading 2', 1), estiloH('Heading3', 'Heading 3', 2, { italics: true })]
+    },
+    sections
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const nombre = ($('titulo').value || 'informe').trim().replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 50) + '.docx';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = nombre; a.click();
+  estado('Listo: se descargó ' + nombre + '. Ábrelo en Word y actualiza el índice (clic derecho → Actualizar campo).');
+}
+
+$('generar').addEventListener('click', () => generar().catch(err => estado('Error: ' + err.message, true)));
+</script>
+</body>
+</html>
