@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador académico</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<!-- 📝 COMENTARIO: El atributo data-modo decide qué formulario se ve: normal | ensayo2 | quimica | paper | citas | secuencia | plan.
+     Las reglas CSS body[data-modo=...] (arriba) muestran u ocultan los bloques con clase .doc y .prof.
+     Los 3 documentos analizados se relacionan así:
+      · Secuencia didáctica (imagen PNG)  -> YA está en este archivo (modo "secuencia").
+      · Plan trimestral                   -> YA está (modo "plan").
+      · Control de notas de estudiante (.docx) -> NO está en este archivo; sería un modo nuevo (ver comentario en el selector de abajo). -->
+<body data-modo="normal">
+<main>
+<!-- ===== CAMBIO: aviso de privacidad (inicio) ===== -->
+<div class="aviso-privacidad" role="note">
+<strong>🔒 App para trabajos anónimos.</strong>
+Todo se procesa en tu navegador y no se envía información a ningún servidor.
+Tus datos se guardan solo en este dispositivo.
+</div>
+<!-- ===== CAMBIO: aviso de privacidad (fin) ===== -->
+<h1>Generador académico</h1>
+<p class="sub">Llena los campos y descarga el Word listo. Tu texto se guarda solo.</p>
+
+<!-- 📝 COMENTARIO: Selector principal de modos. Cada <option> debe coincidir con un valor de data-modo.
+     SUGERENCIA: para incorporar el "Control de notas de estudiante" (Word) bajo el grupo "Profesores", agrega aquí
+     <option value="notas">Control de notas</option>, un <fieldset id="fsNotas" class="prof"> y la regla CSS body[data-modo=notas] #fsNotas{display:block}.
+     Hoy esa herramienta existe como app aparte (reportes de estudiantes), no dentro del generador académico. -->
+<div style="margin:0 0 16px"><label for="modoSel">¿Qué quieres crear?</label>
+<select id="modoSel"><option value="normal">Ensayo</option><option value="ensayo2">Ensayo 2 (sin APA, con tablas)</option><option value="quimica">Informe de química</option><option value="paper">Paper académico</option><option value="citas">Citas y referencias APA 7</option><optgroup label="Profesores"><option value="secuencia">Secuencia didáctica (planeamiento semanal)</option><option value="plan">Plan trimestral</option></optgroup><optgroup label="Docentes"><option value="notas">Control de notas</option></optgroup></select></div>
+
+<fieldset id="citas" class="solo-citas">
+<legend>Citas y referencias APA 7</legend>
+<label for="ctipo">Tipo de fuente</label>
+<select id="ctipo"><option value="libro">Libro</option><option value="capitulo">Capítulo de libro</option><option value="articulo">Artículo de revista</option><option value="web">Página web</option><option value="tesis">Tesis</option><option value="informe">Informe</option><option value="video">Video (YouTube)</option></select>
+<label for="cau">Autores (uno por línea: Apellido, Nombre)</label>
+<textarea id="cau" data-nocont style="min-height:80px" placeholder="Pérez Gómez, Ana&#10;Rojas, Luis"></textarea>
+<p class="ayuda" id="cayuda"></p>
+<div class="fila"><div><label for="cy">Año</label><input type="text" id="cy" placeholder="2020 (vacío = s. f.)"></div>
+<div data-ct="web video"><label for="cm">Mes y día</label><input type="text" id="cm" placeholder="5 de marzo"></div></div>
+<label for="ct" id="lct">Título</label><input type="text" id="ct" placeholder="Solo mayúscula inicial y en nombres propios">
+<div data-ct="capitulo"><label for="cl">Título del libro</label><input type="text" id="cl">
+<label for="ceds">Editores del libro (uno por línea: Apellido, Nombre)</label><textarea id="ceds" data-nocont style="min-height:60px"></textarea></div>
+<div data-ct="articulo"><label for="cr">Nombre de la revista</label><input type="text" id="cr">
+<div class="fila"><div><label for="cv">Volumen</label><input type="text" id="cv"></div><div><label for="cn">Número</label><input type="text" id="cn"></div></div></div>
+<div data-ct="libro capitulo"><label for="ce">Edición (opcional)</label><input type="text" id="ce" placeholder="2.ª"></div>
+<div data-ct="capitulo articulo"><label for="cp">Páginas</label><input type="text" id="cp" placeholder="45-67"></div>
+<div data-ct="tesis"><label for="ctt">Tipo de tesis</label><input type="text" id="ctt" value="Tesis de licenciatura">
+<label for="cre">Repositorio o base de datos (opcional)</label><input type="text" id="cre"></div>
+<div data-ct="informe"><label for="cin">Número de informe (opcional)</label><input type="text" id="cin"></div>
+<div data-ct="libro capitulo web tesis informe video"><label for="cb" id="lcb">Editorial</label><input type="text" id="cb"></div>
+<div data-ct="todos"><label for="cu" id="lcu">DOI o enlace (opcional)</label><input type="text" id="cu" placeholder="10.1000/xyz123 o https://..."></div>
+<div id="cOut"></div>
+<label style="margin-top:18px">Mi lista de referencias</label>
+<p class="ayuda">Se guarda en el cuadro "Referencias" de tu documento, en orden alfabético.</p>
+<div id="cRefs"></div>
+</fieldset>
+
+<!-- ===== CAMBIO: PROFESORES (inicio) - formularios de Secuencia didáctica y Plan trimestral ===== -->
+<!-- 📝 COMENTARIO: Formulario "Secuencia didáctica" = réplica de la imagen (Escuela Bilingüe Rubén Darío).
+     Correspondencia imagen -> campo:
+      · Encabezado (Dirección regional / Escuela)      -> sRegional, sEscuela
+      · ASIGNATURA, ÁREA, DOCENTE, GRADO               -> sAsignatura, sArea, sDocente, sGrado
+      · PLAN SEMANAL, TRIMESTRE, SEMANA, TEMA          -> sPlan, sTrim, sSemana, sTema
+      · Competencias                                   -> sComp
+      · Objetivo de aprendizaje                        -> sObj
+      · Indicadores: Conceptual / Procedimental / Actitudinal -> sIndC / sIndP / sIndA
+      · Evidencia: De producto / De desempeño          -> sEvP / sEvD
+      · Criterios: Forma / Fondo                       -> sForma / sFondo
+      · Tipo de evaluación e Instrumento               -> sTipo / sInstr
+     Campos extra que NO están en la imagen: sInicio, sDes, sCierre, sRec (segunda tabla opcional: Inicio / Desarrollo / Cierre / Recursos).
+     Cada línea (Enter) del textarea se vuelve una línea dentro de la celda de la tabla. -->
+<fieldset id="fsSec" class="prof"><legend>Secuencia didáctica (planeamiento semanal)</legend>
+<p class="ayuda">Un Enter separa cada línea dentro de un cuadro. Todo se ordena solo en la tabla.</p><label for="sRegional">Dirección regional</label><input type="text" id="sRegional" placeholder=""><label for="sEscuela">Escuela</label><input type="text" id="sEscuela" placeholder=""><label for="sAsignatura">Asignatura</label><input type="text" id="sAsignatura" placeholder=""><label for="sArea">Área</label><input type="text" id="sArea" placeholder=""><label for="sDocente">Docente</label><input type="text" id="sDocente" placeholder=""><label for="sGrado">Grado</label><input type="text" id="sGrado" placeholder=""><label for="sPlan">Plan semanal (N.º)</label><input type="text" id="sPlan" placeholder=""><label for="sTrim">Trimestre</label><input type="text" id="sTrim" placeholder=""><label for="sSemana">Semana (del … al …)</label><input type="text" id="sSemana" placeholder=""><label for="sTema">Tema</label><input type="text" id="sTema" placeholder=""><label for="sComp">Competencias</label><input type="text" id="sComp" placeholder=""><label for="sObj">Objetivo de aprendizaje</label><textarea id="sObj" data-nocont placeholder=""></textarea><label for="sIndC">Indicadores conceptuales</label><textarea id="sIndC" data-nocont placeholder=""></textarea><label for="sIndP">Indicadores procedimentales</label><textarea id="sIndP" data-nocont placeholder=""></textarea><label for="sIndA">Indicadores actitudinales</label><textarea id="sIndA" data-nocont placeholder=""></textarea><label for="sEvP">Evidencia de producto</label><textarea id="sEvP" data-nocont placeholder=""></textarea><label for="sEvD">Evidencia de desempeño</label><textarea id="sEvD" data-nocont placeholder=""></textarea><label for="sForma">Criterios de evaluación: Forma</label><textarea id="sForma" data-nocont placeholder=""></textarea><label for="sFondo">Criterios de evaluación: Fondo</label><textarea id="sFondo" data-nocont placeholder=""></textarea><label for="sTipo">Tipo de evaluación (ej. Heteroevaluación)</label><input type="text" id="sTipo" placeholder=""><label for="sInstr">Instrumento (ej. Escala estimativa, Rúbrica, Lista de cotejo)</label><input type="text" id="sInstr" placeholder=""><label for="sInicio">Actividades de inicio (opcional)</label><textarea id="sInicio" data-nocont placeholder=""></textarea><label for="sDes">Actividades de desarrollo (opcional)</label><textarea id="sDes" data-nocont placeholder=""></textarea><label for="sCierre">Actividades de cierre (opcional)</label><textarea id="sCierre" data-nocont placeholder=""></textarea><label for="sRec">Recursos y tiempo (opcional)</label><textarea id="sRec" data-nocont placeholder=""></textarea><button id="genSec" type="button" data-gp="secuencia">Generar secuencia en Word</button><p id="estSec" role="status"></p></fieldset>
+<!-- 📝 COMENTARIO: Formulario "Plan trimestral". La tabla se arma con el cuadro pFilas: una fila por línea,
+     columnas separadas por | (Semana | Contenido/Tema | Objetivo | Indicadores | Evaluación). Si faltan columnas se rellenan vacías; si sobran se descartan (máx. 5). -->
+<fieldset id="fsPlan" class="prof"><legend>Plan trimestral</legend>
+<label for="pRegional">Dirección regional</label><input type="text" id="pRegional" placeholder=""><label for="pEscuela">Escuela</label><input type="text" id="pEscuela" placeholder=""><label for="pAsignatura">Asignatura</label><input type="text" id="pAsignatura" placeholder=""><label for="pDocente">Docente</label><input type="text" id="pDocente" placeholder=""><label for="pGrado">Grado</label><input type="text" id="pGrado" placeholder=""><label for="pTrim">Trimestre</label><input type="text" id="pTrim" placeholder=""><label for="pAnio">Año lectivo</label><input type="text" id="pAnio" placeholder=""><label for="pComp">Competencias</label><input type="text" id="pComp" placeholder=""><label for="pFilas">Filas de la tabla (una por línea)</label><textarea id="pFilas" data-nocont placeholder="Semana 1 | Tema | Objetivo de aprendizaje | Indicadores de logro | Evaluación"></textarea><p class="ayuda">Separa las 5 columnas con la barra <b>|</b>: Semana | Contenido o tema | Objetivo | Indicadores de logro | Evaluación.</p><button id="genPlan" type="button" data-gp="plan">Generar plan trimestral en Word</button><p id="estPlan" role="status"></p></fieldset>
+<!-- ===== CAMBIO: CONTROL DE NOTAS (inicio) ===== -->
+<fieldset id="fsNotas" class="prof"><legend>Control de notas</legend>
+<p class="ayuda">Aquí va el contenido del repositorio «control de notas».</p>
+<div id="controlNotas"></div>
+</fieldset>
+<!-- ===== CAMBIO: CONTROL DE NOTAS (fin) ===== -->
+<!-- ===== CAMBIO: PROFESORES (fin) ===== -->
+
+<!-- 📝 COMENTARIO: Bloque de portada compartido por Ensayo, Informe de química y Paper.
+     Los div con data-solo="..." se muestran solo en los modos listados (ORCID solo en paper; logos solo en quimica y ensayo2).
+     Los valores por defecto (universidad, facultad, carrera) son de un caso concreto: cámbialos si la app la usarán otras personas. -->
+<fieldset class="doc">
+<legend>Portada</legend>
+<label for="univ">Universidad</label>
+<input type="text" id="univ" value="Universidad de Panamá">
+<label for="facultad">Facultad</label>
+<input type="text" id="facultad" value="Facultad de Ingeniería">
+<label for="carrera">Carrera</label>
+<input type="text" id="carrera" value="Ingeniería Civil en Infraestructuras">
+<label for="titulo">Título (curso o trabajo)</label>
+<input type="text" id="titulo" placeholder="Laboratorio #2">
+<div data-solo="quimica ensayo2">
+<label for="temas">Temas o descripción (una línea por tema)</label>
+<textarea id="temas" style="min-height:80px"></textarea>
+</div>
+<label for="integrantes">Integrantes (uno por línea)</label>
+<textarea id="integrantes" style="min-height:70px"></textarea>
+<div data-solo="paper">
+<label for="orcid">Número ORCID (opcional)</label>
+<input type="text" id="orcid" placeholder="0000-0000-0000-0000" maxlength="19" autocomplete="off">
+<p class="ayuda">Escribe los 16 caracteres (el último puede ser X); los guiones se ponen solos.</p>
+</div>
+<div class="fila">
+<div><label for="asignatura">Asignatura</label><input type="text" id="asignatura" placeholder="Química-100"></div>
+<div><label for="fecha">Fecha de entrega</label><input type="date" id="fecha"></div>
+</div>
+<label for="docentes">Docentes</label>
+<input type="text" id="docentes">
+<label for="asistente">Asistente (opcional)</label>
+<input type="text" id="asistente">
+<div data-solo="quimica ensayo2">
+<label for="logoIzq">Logo izquierdo (opcional)</label>
+<input type="file" id="logoIzq" accept="image/png,image/jpeg">
+<label for="logoDer">Logo derecho (opcional)</label>
+<input type="file" id="logoDer" accept="image/png,image/jpeg">
+</div>
+</fieldset>
+
+<!-- 📝 COMENTARIO: Contenido del documento. Sintaxis soportada en los textarea (la explica el párrafo de ayuda):
+     ## subtítulo · ### sub-subtítulo · - viñeta · ? pregunta · $ ecuación · **negrita** · *cursiva* · ~sub~ · ^super^ · línea terminada en = (cálculo automático).
+     El procesamiento real de esta sintaxis está en las funciones cuerpo(), runs() y calcular() del script principal. -->
+<fieldset id="contenido" class="doc">
+<legend>Contenido</legend>
+<p class="ayuda">Un Enter separa los párrafos. Formato: <b>##</b> subtítulo · <b>###</b> sub-subtítulo · <b>-</b> viñeta · **negrita** · *cursiva* · H~2~O subíndice · 10^23^ superíndice · Cálculo automático: termina una línea en <b>=</b> después de una operación solo de números (<b>0.5/23 =</b>) y el resultado se calcula solo, con 3 decimales; potencia con <b>**</b>.</p>
+
+<div data-solo="quimica paper">
+<label for="resumen">Resumen</label>
+<textarea id="resumen"></textarea>
+<label for="palabras">Palabras clave (máximo 5, separadas por comas)</label>
+<input type="text" id="palabras" data-claves placeholder="concreto, resistencia, ensayo">
+</div>
+<div data-solo="paper">
+<label for="abstract">Abstract (el resumen en inglés)</label>
+<textarea id="abstract"></textarea>
+<label for="keywords">Keywords (máximo 5, separadas por comas)</label>
+<input type="text" id="keywords" data-claves placeholder="concrete, strength, testing">
+</div>
+
+<label for="intro">Introducción</label>
+<textarea id="intro" placeholder="Escribe o pega aquí tu introducción…"></textarea>
+
+<div data-solo="normal">
+<label for="desarrollo">Desarrollo</label>
+<textarea id="desarrollo" placeholder="Escribe o pega aquí el contenido…"></textarea>
+</div>
+
+<div data-solo="ensayo2">
+<label>Contenido: puntos del tema (cada uno sale en su tabla)</label>
+<input type="text" id="e2data" hidden>
+<div id="puntos"></div>
+<button type="button" class="sec" id="addPunto">+ Agregar punto</button>
+</div>
+
+<div data-solo="quimica">
+<label>Materiales (el sistema arma la tabla)</label>
+<div class="fila">
+<div><label for="equipo">Instrumentos y equipo</label><textarea id="equipo" placeholder="Uno por línea"></textarea></div>
+<div><label for="muestras">Muestras y reactivos</label><textarea id="muestras" placeholder="Uno por línea"></textarea></div>
+</div>
+<label for="metodologia">Metodología</label>
+<textarea id="metodologia" placeholder="Usa ## para Parte I, ### para 1.1 y - para los pasos"></textarea>
+<label for="resultados">Resultados y discusión</label>
+<textarea id="resultados"></textarea>
+<p class="ayuda">Las tablas de resultados agrégalas a mano en Word, en el lugar que quieras.</p>
+<label for="preguntas">Preguntas y respuestas complementarias</label>
+<textarea id="preguntas" placeholder="Empieza cada pregunta con ? y escribe la respuesta debajo"></textarea>
+</div>
+
+<div data-solo="paper">
+<label for="objGeneral">Objetivo general</label>
+<textarea id="objGeneral" style="min-height:70px"></textarea>
+<label for="objEsp">Objetivos específicos (uno por línea)</label>
+<textarea id="objEsp" style="min-height:90px"></textarea>
+<label for="marco">Marco teórico y desarrollo de los conceptos</label>
+<textarea id="marco"></textarea>
+<label for="ecuaciones">Ecuaciones fundamentales y explicación de variables</label>
+<textarea id="ecuaciones" placeholder="$ Q = A · v&#10;donde:&#10;- **Q**: caudal (m^3^/s)"></textarea>
+<p class="ayuda">Una línea que empiece con <b>$</b> se centra como ecuación. Usa ~ y ^ para subíndices y superíndices.</p>
+<label for="aplicaciones">Aplicaciones en ingeniería</label>
+<textarea id="aplicaciones"></textarea>
+<label for="analisis">Análisis y discusión</label>
+<textarea id="analisis"></textarea>
+</div>
+
+<label for="concl">Conclusión</label>
+<textarea id="concl"></textarea>
+<div data-solo="ensayo2">
+<label for="glosario">Glosario (una línea por término: Término: definición)</label>
+<textarea id="glosario"></textarea>
+</div>
+<label for="refs" id="lblRefs">Referencias</label>
+<textarea id="refs" placeholder="Una referencia por línea"></textarea>
+</fieldset>
+
+<fieldset class="doc">
+<legend>Anexos</legend>
+<label for="imgs">Fotografías o gráficos (se colocan al final)</label>
+<input type="file" id="imgs" accept="image/png,image/jpeg" multiple>
+<div id="miniaturas"></div>
+<div data-solo="ensayo2">
+<label for="anexTxt">Texto de cada anexo (una línea por imagen, en el mismo orden)</label>
+<textarea id="anexTxt"></textarea>
+</div>
+<p class="ayuda">Las imágenes y los logos no se guardan solos: si cierras la página, súbelos otra vez.</p>
+</fieldset>
+
+<fieldset class="doc">
+<legend>Formato</legend>
+<div class="fila">
+<div><label for="papel">Tamaño de papel</label>
+<select id="papel"><option value="letter">Carta</option><option value="a4">A4</option></select></div>
+<div><label for="fuente">Fuente</label>
+<select id="fuente"><option>Times New Roman</option><option>Calibri</option><option>Arial</option></select></div>
+</div>
+<div data-solo="ensayo2"><label for="e2color">Color del diseño</label>
+<select id="e2color"><option value="azul">Azul</option><option value="verde">Verde</option><option value="vino">Vino</option><option value="morado">Morado</option><option value="naranja">Naranja</option></select></div>
+<label class="op"><input type="checkbox" id="just"> Texto justificado (APA 7 usa alineación a la izquierda)</label>
+<label class="op"><input type="checkbox" id="indice" checked> Incluir índice</label>
+<label class="op" data-solo="normal paper"><input type="checkbox" id="desdeIntro"> Numerar desde la introducción (la portada y el índice sin número; APA 7 numera desde la portada)</label>
+</fieldset>
+
+<p id="guardado" role="status"></p>
+<button id="generar" class="doc" type="button">Generar documento Word</button>
+<p id="estado" class="doc" role="status"></p>
+<button id="borrar" class="sec doc" type="button">Borrar todo el texto guardado</button>
+
+<p class="nota doc"><b>Nota:</b> Ensayo y Paper académico se generan en formato APA 7 (7.ª edición): portada estudiantil APA (título en negrita, autor, afiliación, curso, docente y fecha, sin logos), Times New Roman 12 pt (o Calibri/Arial 11 pt), interlineado doble, márgenes de 2,54 cm, sangría de primera línea de 1,27 cm, número de página arriba a la derecha desde la portada (si activas «Numerar desde la introducción», este punto deja de ser APA), encabezados en negrita con la jerarquía APA, resumen y abstract en página aparte, y referencias con sangría francesa. El índice es opcional y no forma parte de APA; el informe de química conserva su portada institucional con logos. Las citas dentro del texto y la lista de referencias debes redactarlas tú según APA 7. «Ensayo 2» no sigue APA: es un diseño libre con tablas.</p>
+</main>
+<!-- ===== CAMBIO: vista previa (inicio) ===== -->
+<!-- 📝 COMENTARIO: Vista previa lateral (≥1100 px de ancho queda fija a la derecha; en móvil se abre con el botón 👁).
+     La llena el segundo <script> (pintar()). Es una aproximación: no refleja saltos de página reales del Word. -->
+<aside id="vp" aria-label="Vista previa del documento">
+<button id="vpCerrar" type="button">✕ Cerrar vista previa</button>
+<p class="vpnota">Vista previa aproximada: el Word final puede variar en saltos de página. Las imágenes no se muestran.</p>
+<div id="hoja" class="hoja"></div>
+</aside>
+<button id="vpBtn" type="button">👁 Vista previa</button>
+<!-- ===== CAMBIO: vista previa (fin) ===== -->
+
+
+<!-- 📝 COMENTARIO: Aviso flotante de cálculos. Lo controla el evento focusin del script principal (se oculta 15 s después o con "Entendido"). -->
+<div id="tip" class="tip" role="note" hidden>
+<b>💡 Este cuadro también hace cálculos sencillos</b>
+<ul>
+<li>Escribe la operación y <b style="display:inline">termina la línea con =</b><br>Ejemplo: <code>P = m/v = 0.5/23 =</code></li>
+<li>Al generar el Word, el resultado aparece solo, con 3 decimales: <code>0.022</code>. En este cuadro no se muestra.</li>
+<li>Puedes usar <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>( )</code> y <code>**</code> para potencias (<code>10**3</code>).</li>
+<li>Solo con números: si la operación tiene letras o unidades (<code>0.5 g / 23 mL =</code>), no la calcula.</li>
+</ul>
+<button id="tipCerrar" type="button">Entendido</button>
+</div>
+
+<!-- ===== CAMBIO: vista previa (inicio) ===== -->
+<!-- ===== CAMBIO: vista previa (fin) ===== -->
+<!-- ===== CAMBIO: PROFESORES (inicio) - lógica: arma la tabla, la vista previa y el Word ===== -->
+<!-- ===== CAMBIO: PROFESORES (fin) ===== -->
+<script src="script.js"></script>
+</body>
+</html>
